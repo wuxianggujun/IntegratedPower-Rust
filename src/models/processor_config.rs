@@ -2,6 +2,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
+use calamine::Reader;
 
 /// 处理器配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -14,6 +15,10 @@ pub struct ProcessorConfig {
     pub output_dir: Option<PathBuf>,
     /// 输出文件名
     pub output_filename: String,
+    /// 选中的 sheet 名称（None 表示处理所有 sheet）
+    pub selected_sheet: Option<String>,
+    /// 可用的 sheet 列表（从文件中读取）
+    pub available_sheets: Vec<String>,
     /// 功能特定选项
     pub options: HashMap<String, ConfigValue>,
 }
@@ -41,6 +46,8 @@ impl Default for ProcessorConfig {
             input_type: InputType::Folder,
             output_dir: None,
             output_filename: "output.xlsx".to_string(),
+            selected_sheet: None,
+            available_sheets: Vec::new(),
             options: HashMap::new(),
         }
     }
@@ -50,14 +57,60 @@ impl ProcessorConfig {
     pub fn new(processor_id: &str) -> Self {
         let mut config = Self::default();
         
-        // 根据处理器类型设置默认文件名
-        config.output_filename = match processor_id {
-            "export_cargo_analysis" => "货物分析表.xlsx".to_string(),
-            "auxiliary_material" => "辅材处理结果.xlsx".to_string(),
-            _ => "output.xlsx".to_string(),
-        };
+        // 根据处理器类型设置默认配置
+        match processor_id {
+            "export_cargo_analysis" => {
+                config.output_filename = "货物分析表.xlsx".to_string();
+                config.input_type = InputType::File;
+                // 设置默认 sheet 名称
+                config.selected_sheet = Some("货物数据".to_string());
+                // 设置默认选项
+                config.set_bool("include_statistics".to_string(), true);
+                config.set_bool("generate_charts".to_string(), true);
+                config.set_bool("export_logs".to_string(), false);
+            }
+            "auxiliary_material" => {
+                config.output_filename = "辅材处理结果.xlsx".to_string();
+                config.input_type = InputType::File;
+                // 设置默认 sheet 名称
+                config.selected_sheet = Some("辅材清单".to_string());
+                // 设置默认选项
+                config.set_bool("auto_classify".to_string(), true);
+                config.set_bool("remove_duplicates".to_string(), true);
+                config.set_bool("generate_summary".to_string(), false);
+            }
+            _ => {
+                config.output_filename = "output.xlsx".to_string();
+            }
+        }
         
         config
+    }
+    
+    /// 从文件加载可用的 sheet 列表
+    pub fn load_sheets_from_file(&mut self) -> Result<(), String> {
+        if let Some(path) = &self.input_path {
+            if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("xlsx") {
+                // 使用 calamine 读取 sheet 列表
+                match calamine::open_workbook_auto(path) {
+                    Ok(mut workbook) => {
+                        self.available_sheets = workbook.sheet_names().to_vec();
+                        
+                        // 如果当前没有选中的 sheet，选择第一个
+                        if self.selected_sheet.is_none() && !self.available_sheets.is_empty() {
+                            self.selected_sheet = Some(self.available_sheets[0].clone());
+                        }
+                        
+                        Ok(())
+                    }
+                    Err(e) => Err(format!("无法读取 Excel 文件: {}", e)),
+                }
+            } else {
+                Err("不是有效的 Excel 文件".to_string())
+            }
+        } else {
+            Err("未选择输入文件".to_string())
+        }
     }
     
     pub fn get_bool(&self, key: &str) -> bool {

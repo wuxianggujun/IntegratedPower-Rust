@@ -3,6 +3,7 @@ mod config;
 mod engine;
 mod error;
 mod history;
+mod logger;
 mod models;
 mod processor;
 mod ui;

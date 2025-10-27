@@ -246,6 +246,12 @@ fn render_io_section(ui: &mut egui::Ui, config: &mut crate::models::ProcessorCon
     render_input_card(ui, config);
     ui.add_space(12.0);
     
+    // Sheet 选择器（仅当选择了文件时显示）
+    if config.input_type == crate::models::InputType::File && config.input_path.is_some() {
+        render_sheet_selector(ui, config);
+        ui.add_space(12.0);
+    }
+    
     // 输出目录
     render_output_card(ui, config);
     ui.add_space(12.0);
@@ -318,6 +324,88 @@ fn render_input_card(ui: &mut egui::Ui, config: &mut crate::models::ProcessorCon
                         if let Some(path) = selected {
                             config.input_path = Some(path);
                         }
+                    }
+                });
+            });
+        });
+}
+
+fn render_sheet_selector(ui: &mut egui::Ui, config: &mut crate::models::ProcessorConfig) {
+    egui::Frame::none()
+        .fill(ui.visuals().faint_bg_color)
+        .rounding(10.0)
+        .inner_margin(16.0)
+        .stroke(egui::Stroke::new(1.0, ui.visuals().widgets.noninteractive.bg_stroke.color))
+        .show(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.label(egui::RichText::new("📋").size(28.0));
+                ui.add_space(12.0);
+                
+                ui.vertical(|ui| {
+                    ui.label(egui::RichText::new("选择 Sheet").size(15.0).strong());
+                    ui.add_space(4.0);
+                    
+                    // 如果还没有加载 sheet 列表，显示加载按钮
+                    if config.available_sheets.is_empty() {
+                        ui.horizontal(|ui| {
+                            ui.label(
+                                egui::RichText::new("点击加载 Sheet 列表")
+                                    .size(12.0)
+                                    .italics()
+                                    .color(ui.visuals().weak_text_color()),
+                            );
+                            
+                            if ui.button("🔄 加载").clicked() {
+                                // 从文件加载 sheet 列表
+                                match config.load_sheets_from_file() {
+                                    Ok(_) => {
+                                        crate::log_info!("成功加载 {} 个 Sheet", config.available_sheets.len());
+                                    }
+                                    Err(e) => {
+                                        crate::log_error!("加载 Sheet 失败: {}", e);
+                                        // 显示错误提示
+                                    }
+                                }
+                            }
+                        });
+                    } else {
+                        // 显示 sheet 下拉选择框
+                        let selected_text = config.selected_sheet.as_ref()
+                            .map(|s| s.as_str())
+                            .unwrap_or("所有 Sheet");
+                        
+                        egui::ComboBox::from_label("")
+                            .selected_text(selected_text)
+                            .show_ui(ui, |ui| {
+                                // "所有 Sheet" 选项
+                                if ui.selectable_value(&mut config.selected_sheet, None, "所有 Sheet").clicked() {
+                                    // 选中了所有 Sheet
+                                }
+                                
+                                ui.separator();
+                                
+                                // 各个 sheet 选项
+                                for sheet in config.available_sheets.clone() {
+                                    let is_selected = config.selected_sheet.as_ref() == Some(&sheet);
+                                    if ui.selectable_label(is_selected, &sheet).clicked() {
+                                        config.selected_sheet = Some(sheet.clone());
+                                    }
+                                }
+                            });
+                        
+                        ui.add_space(4.0);
+                        ui.label(
+                            egui::RichText::new(format!("共 {} 个 Sheet", config.available_sheets.len()))
+                                .size(11.0)
+                                .color(ui.visuals().weak_text_color()),
+                        );
+                    }
+                });
+                
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if !config.available_sheets.is_empty() && ui.button("重新加载").clicked() {
+                        config.available_sheets.clear();
+                        config.selected_sheet = None;
                     }
                 });
             });

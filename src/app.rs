@@ -25,6 +25,9 @@ pub struct IntegratedPowerApp {
     // 处理器配置
     pub processor_configs: ProcessorConfigs,
 
+    // 日志查看器
+    pub log_viewer: crate::ui::LogViewer,
+
     // 进度接收通道
     pub progress_rx: Option<mpsc::Receiver<ProcessingProgress>>,
 }
@@ -53,6 +56,9 @@ impl IntegratedPowerApp {
         // 加载处理器配置
         let processor_configs = Self::load_processor_configs().unwrap_or_default();
 
+        // 记录应用启动
+        crate::log_info!("IntegratedPower 应用启动");
+
         Self {
             config_manager,
             processor_manager,
@@ -64,6 +70,7 @@ impl IntegratedPowerApp {
             search_query: String::new(),
             error_message: None,
             processor_configs,
+            log_viewer: crate::ui::LogViewer::default(),
             progress_rx: None,
         }
     }
@@ -205,6 +212,9 @@ impl eframe::App for IntegratedPowerApp {
 
         // 显示错误对话框
         self.show_error(ctx);
+
+        // 显示日志查看器
+        self.log_viewer.render(ctx);
 
         // 处理后台任务
         self.poll_processing_tasks(ctx);

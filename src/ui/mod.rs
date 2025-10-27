@@ -3,6 +3,9 @@ pub mod home;
 pub mod processing;
 pub mod settings;
 pub mod history;
+pub mod log_viewer;
+
+pub use log_viewer::LogViewer;
 
 use crate::app::IntegratedPowerApp;
 use crate::models::AppView;
@@ -90,6 +93,21 @@ pub fn render_top_panel(app: &mut IntegratedPowerApp, ctx: &egui::Context) {
                     {
                         app.toggle_theme();
                     }
+                    
+                    ui.add_space(5.0);
+                    
+                    // 日志查看器按钮
+                    if ui
+                        .add_sized(
+                            egui::vec2(40.0, 32.0),
+                            egui::Button::new(egui::RichText::new("📋").size(18.0)),
+                        )
+                        .on_hover_text("查看日志")
+                        .clicked()
+                    {
+                        app.log_viewer.show = !app.log_viewer.show;
+                    }
+                    
                     ui.add_space(8.0);
                 });
             });
