@@ -92,6 +92,10 @@ fn render_compact_card(app: &mut IntegratedPowerApp, ui: &mut egui::Ui, processo
         .inner_margin(12.0);
 
     let response = card_frame.show(ui, |ui| {
+        // 设置固定宽度，确保所有卡片宽度一致
+        ui.set_width(ui.available_width());
+        ui.set_min_height(70.0);
+        
         ui.horizontal(|ui| {
             // 图标
             if let Some(icon) = &processor.icon {
@@ -102,13 +106,16 @@ fn render_compact_card(app: &mut IntegratedPowerApp, ui: &mut egui::Ui, processo
             
             ui.add_space(10.0);
             
-            // 名称和描述
+            // 名称和描述 - 使用 available_width 确保填满剩余空间
             ui.vertical(|ui| {
+                ui.set_width(ui.available_width());
+                
                 ui.label(
                     egui::RichText::new(&processor.name)
                         .size(15.0)
                         .strong(),
                 );
+                ui.add_space(2.0);
                 ui.label(
                     egui::RichText::new(&processor.description)
                         .size(12.0)
