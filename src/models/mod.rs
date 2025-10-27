@@ -5,6 +5,5 @@ pub mod state;
 
 // 重新导出常用类型
 pub use progress::ProcessingProgress;
-#[allow(unused_imports)]
 pub use result::{ProcessingError, ProcessingResult, ProcessingStats};
-pub use state::AppState;
+pub use state::{AppState, AppView, ProcessingState};

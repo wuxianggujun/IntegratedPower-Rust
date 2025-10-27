@@ -64,20 +64,25 @@ pub struct HistoryManager {
 
 impl HistoryManager {
     /// 创建新的历史记录管理器
-    pub fn new(max_entries: usize) -> Result<Self> {
-        let storage_path = Self::get_storage_path()?;
+    pub fn new(max_entries: usize) -> Self {
+        let storage_path = Self::get_storage_path().unwrap_or_else(|_| PathBuf::from("history.json"));
 
         let entries = if storage_path.exists() {
-            Self::load_from_file(&storage_path)?
+            Self::load_from_file(&storage_path).unwrap_or_else(|_| Vec::new())
         } else {
             Vec::new()
         };
 
-        Ok(Self {
+        Self {
             entries,
             storage_path,
             max_entries,
-        })
+        }
+    }
+
+    /// 加载历史记录管理器（别名方法）
+    pub fn load(max_entries: usize) -> Result<Self> {
+        Ok(Self::new(max_entries))
     }
 
     /// 添加历史记录条目

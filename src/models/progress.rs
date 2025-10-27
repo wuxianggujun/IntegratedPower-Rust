@@ -40,3 +40,14 @@ impl ProcessingProgress {
         self.processed_files >= self.total_files
     }
 }
+
+impl Default for ProcessingProgress {
+    fn default() -> Self {
+        Self {
+            total_files: 0,
+            processed_files: 0,
+            current_file: String::new(),
+            percentage: 0.0,
+        }
+    }
+}

@@ -1,6 +1,4 @@
-use tokio_util::sync::CancellationToken;
-
-/// 应用程序状态
+/// 应用程序状态（保留用于向后兼容）
 #[derive(Debug, Clone)]
 pub enum AppState {
     /// 空闲状态
@@ -9,8 +7,6 @@ pub enum AppState {
     Processing {
         /// 处理器 ID
         processor_id: String,
-        /// 取消令牌
-        cancel_token: CancellationToken,
     },
     /// 错误状态
     Error(String),
@@ -23,11 +19,8 @@ impl AppState {
     }
 
     /// 创建处理中状态
-    pub fn processing(processor_id: String, cancel_token: CancellationToken) -> Self {
-        Self::Processing {
-            processor_id,
-            cancel_token,
-        }
+    pub fn processing(processor_id: String) -> Self {
+        Self::Processing { processor_id }
     }
 
     /// 创建错误状态
@@ -53,15 +46,7 @@ impl AppState {
     /// 获取处理器 ID（如果在处理中）
     pub fn processor_id(&self) -> Option<&str> {
         match self {
-            Self::Processing { processor_id, .. } => Some(processor_id),
-            _ => None,
-        }
-    }
-
-    /// 获取取消令牌（如果在处理中）
-    pub fn cancel_token(&self) -> Option<&CancellationToken> {
-        match self {
-            Self::Processing { cancel_token, .. } => Some(cancel_token),
+            Self::Processing { processor_id } => Some(processor_id),
             _ => None,
         }
     }
@@ -73,4 +58,33 @@ impl AppState {
             _ => None,
         }
     }
+}
+
+/// 应用程序视图
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AppView {
+    /// 主页 - 功能选择
+    Home,
+    /// 处理中
+    Processing,
+    /// 设置
+    Settings,
+    /// 历史记录
+    History,
+}
+
+/// 处理状态（用于 egui 应用）
+#[derive(Debug)]
+pub enum ProcessingState {
+    /// 空闲状态
+    Idle,
+    /// 处理中状态
+    Processing {
+        /// 取消发送通道
+        cancel_tx: std::sync::mpsc::Sender<()>,
+    },
+    /// 完成状态
+    Completed(crate::models::ProcessingResult),
+    /// 错误状态
+    Error(String),
 }

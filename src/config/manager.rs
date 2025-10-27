@@ -27,6 +27,8 @@ pub enum Theme {
     Light,
     /// 深色主题
     Dark,
+    /// 系统主题
+    System,
 }
 
 impl Default for AppConfig {
@@ -34,7 +36,7 @@ impl Default for AppConfig {
         Self {
             default_input_dir: None,
             default_output_dir: None,
-            theme: Theme::Light,
+            theme: Theme::System,
             max_history_entries: 100,
             parallel_processing: true,
             max_parallel_tasks: num_cpus::get().max(2).min(8),
@@ -76,6 +78,16 @@ impl AppConfig {
 pub struct ConfigManager {
     config: AppConfig,
     config_path: PathBuf,
+}
+
+impl Default for ConfigManager {
+    fn default() -> Self {
+        let config_path = Self::get_config_path().unwrap_or_else(|_| PathBuf::from("config.toml"));
+        Self {
+            config: AppConfig::default(),
+            config_path,
+        }
+    }
 }
 
 impl ConfigManager {
@@ -148,6 +160,11 @@ impl ConfigManager {
 
     /// 获取配置
     pub fn config(&self) -> &AppConfig {
+        &self.config
+    }
+
+    /// 获取配置（别名方法）
+    pub fn get_config(&self) -> &AppConfig {
         &self.config
     }
 

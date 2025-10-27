@@ -1,31 +1,28 @@
 mod app;
 mod config;
-mod controller;
 mod engine;
 mod error;
-mod error_logger;
 mod history;
 mod models;
 mod processor;
 mod ui;
 
-use app::Application;
+use app::IntegratedPowerApp;
 
-fn main() {
-    // 初始化日志系统
-    tracing_subscriber::fmt::init();
+fn main() -> Result<(), eframe::Error> {
+    // 配置窗口选项
+    let options = eframe::NativeOptions {
+        viewport: egui::ViewportBuilder::default()
+            .with_inner_size([1200.0, 800.0])
+            .with_min_inner_size([800.0, 600.0])
+            .with_title("IntegratedPower"),
+        ..Default::default()
+    };
 
-    // 创建并运行应用程序
-    match Application::new() {
-        Ok(mut app) => {
-            if let Err(e) = app.run() {
-                eprintln!("应用程序运行错误: {}", e);
-                std::process::exit(1);
-            }
-        }
-        Err(e) => {
-            eprintln!("应用程序初始化失败: {}", e);
-            std::process::exit(1);
-        }
-    }
+    // 启动应用
+    eframe::run_native(
+        "IntegratedPower",
+        options,
+        Box::new(|cc| Ok(Box::new(IntegratedPowerApp::new(cc)))),
+    )
 }
