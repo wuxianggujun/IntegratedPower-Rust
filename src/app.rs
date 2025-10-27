@@ -42,36 +42,25 @@ impl Application {
         self.processor_manager.register_processor(Arc::new(DataCleaningProcessor::new()));
         self.processor_manager.register_processor(Arc::new(DataStatisticsProcessor::new()));
 
-        println!("\n=== IntegratedPower ===");
-        println!("版本: 0.1.0");
-        println!("已注册 {} 个处理器", self.processor_manager.processor_count());
-        println!("\n注意: Qt UI 尚未完全集成");
-        println!("当前为命令行模式演示");
-        println!("\n可用的处理器:");
-        
-        let processors = self.processor_manager.list_processors();
-        for (i, proc) in processors.iter().enumerate() {
-            println!("  {}. {} - {}", i + 1, proc.name, proc.description);
-        }
-        
-        println!("\n配置信息:");
-        println!("  主题: {:?}", self.config_manager.config().theme);
-        println!("  最大历史记录: {}", self.config_manager.config().max_history_entries);
-        println!("  并行处理: {}", self.config_manager.config().parallel_processing);
-        println!("  最大并行任务: {}", self.config_manager.config().max_parallel_tasks);
-        
-        println!("\n历史记录:");
-        println!("  当前记录数: {}", self.history_manager.entry_count());
-        
-        println!("\n提示: 完整的 Qt UI 需要以下步骤:");
-        println!("  1. 确保已安装 Qt 6.10.0");
-        println!("  2. 设置 CMAKE_PREFIX_PATH 环境变量");
-        println!("  3. 实现 CXX-Qt 桥接代码");
-        println!("  4. 编译并运行");
-        
-        println!("\n按 Enter 键退出...");
-        let mut input = String::new();
-        std::io::stdin().read_line(&mut input).ok();
+        tracing::info!("已注册 {} 个处理器", self.processor_manager.processor_count());
+
+        // 创建主控制器
+        // 将管理器安全地移动到控制器中，避免对 Default 的要求
+        let processor_manager = std::mem::replace(&mut self.processor_manager, ProcessorManager::new());
+        let config_manager = std::mem::replace(&mut self.config_manager, ConfigManager::load()?);
+        let max_entries = self.history_manager.max_entries();
+        let history_manager = std::mem::replace(&mut self.history_manager, HistoryManager::new(max_entries)?);
+
+        let controller = crate::controller::main_controller::MainController::new(
+            processor_manager,
+            config_manager,
+            history_manager,
+        );
+
+        // 启动 Qt GUI
+        use crate::ui::qt_app::QtApp;
+        let qt_app = QtApp::new(controller);
+        qt_app.run()?;
 
         Ok(())
     }
