@@ -123,28 +123,45 @@ pub fn render_bottom_panel(app: &IntegratedPowerApp, ctx: &egui::Context) {
                 ui.label(egui::RichText::new(status_text).color(status_color).size(14.0));
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if let Some(input_dir) = &app.input_dir {
-                        if let Ok(entries) = std::fs::read_dir(input_dir) {
-                            let count = entries
-                                .filter_map(|e| e.ok())
-                                .filter(|e| {
-                                    e.path()
-                                        .extension()
-                                        .and_then(|s| s.to_str())
-                                        .map(|s| s == "xlsx")
-                                        .unwrap_or(false)
-                                })
-                                .count();
-                            
+                    // 从当前选中的处理器配置中获取输入路径
+                    let input_path = app
+                        .selected_processor
+                        .as_ref()
+                        .and_then(|id| app.processor_configs.get(id))
+                        .and_then(|config| config.input_path.as_ref());
+
+                    if let Some(input_path) = input_path {
+                        // 如果是文件夹，统计文件数量
+                        if input_path.is_dir() {
+                            if let Ok(entries) = std::fs::read_dir(input_path) {
+                                let count = entries
+                                    .filter_map(|e| e.ok())
+                                    .filter(|e| {
+                                        e.path()
+                                            .extension()
+                                            .and_then(|s| s.to_str())
+                                            .map(|s| s == "xlsx")
+                                            .unwrap_or(false)
+                                    })
+                                    .count();
+
+                                ui.label(
+                                    egui::RichText::new(format!("📊 {} 个文件待处理", count))
+                                        .size(14.0)
+                                        .color(ctx.style().visuals.weak_text_color()),
+                                );
+                            }
+                        } else {
+                            // 如果是单个文件
                             ui.label(
-                                egui::RichText::new(format!("📊 {} 个文件待处理", count))
+                                egui::RichText::new("📄 已选择输入文件")
                                     .size(14.0)
                                     .color(ctx.style().visuals.weak_text_color()),
                             );
                         }
                     } else {
                         ui.label(
-                            egui::RichText::new("📁 未选择输入目录")
+                            egui::RichText::new("📄 未选择输入文件")
                                 .size(14.0)
                                 .color(ctx.style().visuals.weak_text_color()),
                         );

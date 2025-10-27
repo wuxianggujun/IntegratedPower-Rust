@@ -1,8 +1,7 @@
 use crate::config::ConfigManager;
 use crate::history::HistoryManager;
-use crate::models::{AppView, ProcessingProgress, ProcessingState};
+use crate::models::{AppView, ProcessingProgress, ProcessingState, ProcessorConfigs};
 use crate::processor::ProcessorManager;
-use std::path::PathBuf;
 use std::sync::mpsc;
 
 pub struct IntegratedPowerApp {
@@ -14,8 +13,6 @@ pub struct IntegratedPowerApp {
     // UI 状态
     pub current_view: AppView,
     pub selected_processor: Option<String>,
-    pub input_dir: Option<PathBuf>,
-    pub output_dir: Option<PathBuf>,
 
     // 处理状态
     pub processing_state: ProcessingState,
@@ -24,6 +21,9 @@ pub struct IntegratedPowerApp {
     // UI 组件状态
     pub search_query: String,
     pub error_message: Option<String>,
+
+    // 处理器配置
+    pub processor_configs: ProcessorConfigs,
 
     // 进度接收通道
     pub progress_rx: Option<mpsc::Receiver<ProcessingProgress>>,
@@ -50,9 +50,8 @@ impl IntegratedPowerApp {
         // 创建处理器管理器
         let processor_manager = ProcessorManager::new();
 
-        // 从配置中恢复目录
-        let input_dir = config_manager.get_config().default_input_dir.clone();
-        let output_dir = config_manager.get_config().default_output_dir.clone();
+        // 加载处理器配置
+        let processor_configs = Self::load_processor_configs().unwrap_or_default();
 
         Self {
             config_manager,
@@ -60,12 +59,11 @@ impl IntegratedPowerApp {
             history_manager,
             current_view: AppView::Home,
             selected_processor: None,
-            input_dir,
-            output_dir,
             processing_state: ProcessingState::Idle,
             progress: ProcessingProgress::default(),
             search_query: String::new(),
             error_message: None,
+            processor_configs,
             progress_rx: None,
         }
     }
@@ -125,6 +123,43 @@ impl IntegratedPowerApp {
         if let Err(e) = self.config_manager.update_config(config) {
             self.error_message = Some(format!("保存主题设置失败: {}", e));
         }
+    }
+
+    // 保存处理器配置
+    pub fn save_processor_configs(&self) -> anyhow::Result<()> {
+        let config_path = Self::get_processor_configs_path()?;
+        
+        if let Some(parent) = config_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        
+        let json = serde_json::to_string_pretty(&self.processor_configs)?;
+        std::fs::write(&config_path, json)?;
+        
+        Ok(())
+    }
+
+    // 加载处理器配置
+    fn load_processor_configs() -> anyhow::Result<ProcessorConfigs> {
+        let config_path = Self::get_processor_configs_path()?;
+        
+        if !config_path.exists() {
+            return Ok(ProcessorConfigs::default());
+        }
+        
+        let content = std::fs::read_to_string(&config_path)?;
+        let configs: ProcessorConfigs = serde_json::from_str(&content)?;
+        
+        Ok(configs)
+    }
+
+    // 获取处理器配置文件路径
+    fn get_processor_configs_path() -> anyhow::Result<std::path::PathBuf> {
+        let config_dir = dirs::config_dir()
+            .ok_or_else(|| anyhow::anyhow!("无法获取配置目录"))?;
+        
+        let app_config_dir = config_dir.join("IntegratedPower");
+        Ok(app_config_dir.join("processor_configs.json"))
     }
 
     fn poll_processing_tasks(&mut self, ctx: &egui::Context) {
