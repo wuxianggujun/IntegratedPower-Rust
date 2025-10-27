@@ -30,21 +30,21 @@ impl ProcessorManager {
 
     /// 注册示例处理器
     fn register_example_processors(&mut self) {
-        // 示例处理器 1
+        // 处理器 1: 导出货物分析表
         self.processors.push(ProcessorEntry {
-            id: "data_cleaning".to_string(),
-            name: "数据清洗".to_string(),
-            description: "清洗和过滤数据，移除空值和重复项".to_string(),
-            icon: Some("🧹".to_string()),
+            id: "export_cargo_analysis".to_string(),
+            name: "导出货物分析表".to_string(),
+            description: "分析货物数据并生成分析报表".to_string(),
+            icon: Some("📦".to_string()),
             version: "1.0.0".to_string(),
         });
 
-        // 示例处理器 2
+        // 处理器 2: 辅材处理
         self.processors.push(ProcessorEntry {
-            id: "data_statistics".to_string(),
-            name: "数据统计".to_string(),
-            description: "计算数据的统计信息和汇总".to_string(),
-            icon: Some("📊".to_string()),
+            id: "auxiliary_material".to_string(),
+            name: "辅材处理".to_string(),
+            description: "处理和整理辅材相关数据".to_string(),
+            icon: Some("🔧".to_string()),
             version: "1.0.0".to_string(),
         });
     }
