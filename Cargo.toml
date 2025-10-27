@@ -1,0 +1,45 @@
+[package]
+name = "integrated-power"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Qt 绑定
+cxx-qt = "0.7"
+cxx-qt-lib = "0.7"
+
+# 数据处理
+polars = { version = "0.44", features = ["lazy", "dtype-full", "parquet"] }
+calamine = "0.26"
+
+# 异步运行时
+tokio = { version = "1", features = ["full"] }
+tokio-util = "0.7"
+async-trait = "0.1"
+
+# 序列化
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+
+# 错误处理
+thiserror = "1"
+anyhow = "1"
+
+# 日志
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+# 时间处理
+chrono = { version = "0.4", features = ["serde"] }
+
+# 其他工具
+uuid = { version = "1", features = ["v4", "serde"] }
+dirs = "5.0"
+num_cpus = "1.16"
+
+[build-dependencies]
+cxx-qt-build = "0.7"
+
+[dev-dependencies]
+tempfile = "3"

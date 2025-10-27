@@ -1,0 +1,14 @@
+# Cargo 配置文件
+# 设置 Qt 路径和构建环境
+
+[env]
+# Qt 安装路径
+CMAKE_PREFIX_PATH = "D:/Programs/Qt/6.10.0/msvc2022_64"
+Qt6_DIR = "D:/Programs/Qt/6.10.0/msvc2022_64/lib/cmake/Qt6"
+
+# 添加 Qt 的 bin 目录到 PATH
+PATH = "D:/Programs/Qt/6.10.0/msvc2022_64/bin;${PATH}"
+
+[build]
+# 使用 MSVC 工具链
+target = "x86_64-pc-windows-msvc"
