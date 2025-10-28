@@ -7,6 +7,8 @@ pub struct LogViewer {
     auto_scroll: bool,
     // 自动换行：控制普通模式与复制模式的软换行行为
     auto_wrap: bool,
+    // 复制模式：使用 TextEdit 支持任意跨行选择 + Ctrl+C
+    text_mode: bool,
 }
 
 impl Default for LogViewer {
@@ -16,6 +18,7 @@ impl Default for LogViewer {
             filter_level: None,
             auto_scroll: true,
             auto_wrap: true,
+            text_mode: false,
         }
     }
 }
@@ -58,6 +61,7 @@ impl LogViewer {
                     
                     ui.checkbox(&mut self.auto_scroll, "自动滚动");
                     ui.checkbox(&mut self.auto_wrap, "自动换行");
+                    ui.checkbox(&mut self.text_mode, "复制模式");
                     
                     if ui.button("🗑 清空").clicked() {
                         LOGGER.clear();
@@ -134,54 +138,90 @@ impl LogViewer {
                             );
                         },
                     );
+                } else if self.text_mode {
+                    // 复制模式：单一多行文本，支持跨行选择 + Ctrl+C
+                    let mut log_text = String::new();
+                    for e in &filtered_entries {
+                        use std::fmt::Write as _;
+                        let _ = writeln!(
+                            log_text,
+                            "{} [{}] {}",
+                            e.timestamp,
+                            e.level.as_str(),
+                            e.message
+                        );
+                    }
+
+                    let mut text = log_text;
+                    egui::ScrollArea::both()
+                        .auto_shrink([false, false])
+                        .show(ui, |ui| {
+                            let mut te = egui::TextEdit::multiline(&mut text)
+                                .desired_rows(24)
+                                .font(egui::TextStyle::Monospace);
+                            if self.auto_wrap {
+                                // 自动换行：宽度跟随窗口，不产生水平拉伸
+                                te = te.desired_width(ui.available_width());
+                            } else {
+                                // 不换行：给内容自然宽度 + code_editor，外层 ScrollArea 提供水平滚动
+                                te = te.desired_width(f32::INFINITY).code_editor();
+                            }
+                            ui.add(te);
+                        });
+                    ui.label(
+                        egui::RichText::new("提示: 选中文本后按 Ctrl+C 可复制；或点击上方‘复制全部’")
+                            .size(11.0)
+                            .color(ui.visuals().weak_text_color()),
+                    );
                 } else {
-                    // 彩色高亮列表 + 双向滚动
+                    // 彩色高亮列表 + 双向滚动（可读性强），不使用右键菜单以免打断选区
                     egui::ScrollArea::vertical()
                         .stick_to_bottom(self.auto_scroll)
                         .show(ui, |ui| {
+                            let render_line = |ui: &mut egui::Ui, e: &LogEntry, wrap: bool| {
+                                let mut job = egui::text::LayoutJob::default();
+                                job.append(
+                                    &e.timestamp,
+                                    0.0,
+                                    egui::TextFormat {
+                                        font_id: egui::FontId::monospace(11.0),
+                                        color: ui.visuals().weak_text_color(),
+                                        ..Default::default()
+                                    },
+                                );
+                                job.append(" ", 0.0, egui::TextFormat { ..Default::default() });
+                                let lvl = format!("[{}]", e.level.as_str());
+                                job.append(
+                                    &lvl,
+                                    0.0,
+                                    egui::TextFormat {
+                                        font_id: egui::FontId::monospace(11.0),
+                                        color: e.level.color(),
+                                        ..Default::default()
+                                    },
+                                );
+                                job.append(" ", 0.0, egui::TextFormat { ..Default::default() });
+                                job.append(
+                                    &e.message,
+                                    0.0,
+                                    egui::TextFormat {
+                                        font_id: egui::FontId::proportional(12.0),
+                                        color: ui.visuals().text_color(),
+                                        ..Default::default()
+                                    },
+                                );
+
+                                let mut label = egui::Label::new(job).selectable(true);
+                                if wrap { label = label.wrap(); }
+                                ui.add(label);
+                            };
+
                             if self.auto_wrap {
-                                for entry in &filtered_entries {
-                                    ui.horizontal_wrapped(|ui| {
-                                        ui.label(
-                                            egui::RichText::new(&entry.timestamp)
-                                                .size(11.0)
-                                                .color(ui.visuals().weak_text_color())
-                                                .monospace(),
-                                        );
-                                        ui.label(
-                                            egui::RichText::new(format!(" [{}] ", entry.level.as_str()))
-                                                .size(11.0)
-                                                .color(entry.level.color())
-                                                .monospace(),
-                                        );
-                                        let label = egui::Label::new(
-                                            egui::RichText::new(&entry.message).size(12.0),
-                                        ).wrap();
-                                        ui.add(label);
-                                    });
-                                }
+                                for e in &filtered_entries { render_line(ui, e, true); }
                             } else {
-                                // 横向过长时提供水平滚动，不撑大窗口
-                                egui::ScrollArea::horizontal()
-                                    .show(ui, |ui| {
-                                        for entry in &filtered_entries {
-                                            ui.horizontal(|ui| {
-                                                ui.label(
-                                                    egui::RichText::new(&entry.timestamp)
-                                                        .size(11.0)
-                                                        .color(ui.visuals().weak_text_color())
-                                                        .monospace(),
-                                                );
-                                                ui.label(
-                                                    egui::RichText::new(format!(" [{}] ", entry.level.as_str()))
-                                                        .size(11.0)
-                                                        .color(entry.level.color())
-                                                        .monospace(),
-                                                );
-                                                ui.label(egui::RichText::new(&entry.message).size(12.0));
-                                            });
-                                        }
-                                    });
+                                egui::ScrollArea::horizontal().show(ui, |ui| {
+                                    for e in &filtered_entries { render_line(ui, e, false); }
+                                });
                             }
                         });
                 }

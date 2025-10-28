@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use calamine::Reader;
+// 使用 umya-spreadsheet 读取 sheet 列表
 
 /// 处理器配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -86,6 +86,7 @@ impl ProcessorConfig {
                 config.output_dir = None;
                 // 设置默认选项
                 config.set_bool("analyze_structure".to_string(), true);
+                config.set_bool("analyze_colors".to_string(), false);
                 config.set_bool("detailed_output".to_string(), true);
             }
             _ => {
@@ -100,10 +101,16 @@ impl ProcessorConfig {
     pub fn load_sheets_from_file(&mut self) -> Result<(), String> {
         if let Some(path) = &self.input_path {
             if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("xlsx") {
-                // 使用 calamine 读取 sheet 列表
-                match calamine::open_workbook_auto(path) {
-                    Ok(workbook) => {
-                        self.available_sheets = workbook.sheet_names().to_vec();
+                // 使用 umya-spreadsheet 读取 sheet 列表
+                match umya_spreadsheet::reader::xlsx::read(path) {
+                    Ok(book) => {
+                        // 获取工作表名称列表
+                        let names: Vec<String> = book
+                            .get_sheet_collection()
+                            .iter()
+                            .map(|ws| ws.get_name().to_string())
+                            .collect();
+                        self.available_sheets = names;
                         
                         // 如果当前没有选中的 sheet，选择第一个
                         if self.selected_sheet.is_none() && !self.available_sheets.is_empty() {

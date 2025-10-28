@@ -17,7 +17,8 @@ rfd = "0.14"
 
 # 数据处理
 polars = { version = "0.44", features = ["lazy", "dtype-full", "parquet"] }
-calamine = "0.26"
+umya-spreadsheet = "2.3.3"
+# 颜色/样式读取改用 umya-spreadsheet，无需手动解析 XML/ZIP
 
 # 异步运行时
 tokio = { version = "1", features = ["full"] }

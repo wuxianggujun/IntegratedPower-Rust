@@ -48,9 +48,6 @@ pub enum AppError {
 
     #[error("Polars 错误: {0}")]
     PolarsError(String),
-
-    #[error("Calamine 错误: {0}")]
-    CalamineError(String),
 }
 
 /// Result 类型别名
@@ -80,11 +77,6 @@ impl AppError {
     /// 创建 Polars 错误
     pub fn polars_error(msg: impl Into<String>) -> Self {
         Self::PolarsError(msg.into())
-    }
-
-    /// 创建 Calamine 错误
-    pub fn calamine_error(msg: impl Into<String>) -> Self {
-        Self::CalamineError(msg.into())
     }
 
     /// 检查是否为 I/O 错误
@@ -118,7 +110,6 @@ impl AppError {
             Self::OperationCancelled => "操作已取消".to_string(),
             Self::HistoryError(msg) => format!("历史记录错误: {}", msg),
             Self::PolarsError(msg) => format!("数据处理错误: {}", msg),
-            Self::CalamineError(msg) => format!("Excel 读取错误: {}", msg),
             Self::TomlDeserializeError(e) => format!("配置文件解析失败: {}", e),
             Self::TomlSerializeError(e) => format!("配置文件保存失败: {}", e),
         }

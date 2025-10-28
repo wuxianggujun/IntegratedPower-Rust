@@ -1,6 +1,5 @@
 use crate::error::{AppError, Result};
 use crate::models::{ProcessingProgress, ProcessingStats};
-use calamine::{open_workbook, Reader, Xlsx};
 use polars::prelude::*;
 use std::path::Path;
 use tokio::task;
@@ -9,68 +8,53 @@ use tokio::task;
 pub struct DataEngine;
 
 impl DataEngine {
-    /// 读取 Excel 文件为 DataFrame
+    /// 读取 Excel 文件为 DataFrame（使用 umya-spreadsheet）
     pub fn read_excel(path: &Path) -> Result<DataFrame> {
         tracing::debug!("读取 Excel 文件: {}", path.display());
 
-        // 使用 Calamine 读取 Excel
-        let mut workbook: Xlsx<_> = open_workbook(path)
-            .map_err(|e| AppError::calamine_error(format!("无法打开文件: {}", e)))?;
+        let book = umya_spreadsheet::reader::xlsx::read(path)
+            .map_err(|e| AppError::excel_error(format!("无法打开文件: {}", e)))?;
 
-        // 获取第一个工作表
-        let sheet_names = workbook.sheet_names().to_owned();
-        if sheet_names.is_empty() {
+        // 取第一个工作表
+        let sheets = book.get_sheet_collection();
+        if sheets.is_empty() {
             return Err(AppError::excel_error("Excel 文件中没有工作表"));
         }
+        let ws = &sheets[0];
 
-        let sheet_name = &sheet_names[0];
-        let range = workbook
-            .worksheet_range(sheet_name)
-            .map_err(|e| AppError::calamine_error(format!("读取工作表失败: {}", e)))?;
-
-        // 转换为 Polars DataFrame
-        Self::range_to_dataframe(range)
-    }
-
-    /// 将 Calamine Range 转换为 Polars DataFrame
-    fn range_to_dataframe(range: calamine::Range<calamine::Data>) -> Result<DataFrame> {
-        let (height, width) = range.get_size();
-
+        // 计算范围（dimension）
+        let (height, width) = Self::worksheet_size(ws);
         if height == 0 || width == 0 {
             return Err(AppError::excel_error("工作表为空"));
         }
 
-        // 读取表头
-        let headers: Vec<String> = (0..width)
-            .map(|col| {
-                range
-                    .get_value((0, col as u32))
-                    .map(|v| v.to_string())
-                    .unwrap_or_else(|| format!("Column_{}", col))
-            })
+        // 读取表头（第一行）
+        let headers: Vec<String> = (1..=width)
+            .map(|col| ws.get_value((col, 1)))
+            .enumerate()
+            .map(|(i, v)| if v.is_empty() { format!("Column_{}", i) } else { v })
             .collect();
 
-        // 读取数据行
+        // 读取数据
         let mut columns: Vec<Column> = Vec::new();
-
         for (col_idx, header) in headers.iter().enumerate() {
             let mut values: Vec<String> = Vec::new();
-
-            for row_idx in 1..height {
-                let value = range
-                    .get_value((row_idx as u32, col_idx as u32))
-                    .map(|v| v.to_string())
-                    .unwrap_or_default();
-                values.push(value);
+            for row in 2..=height {
+                let v = ws.get_value(((col_idx + 1) as u32, row));
+                values.push(v);
             }
-
-            let series = Series::new(header.into(), values);
-            let column = series.into_column();
-            columns.push(column);
+            let series = Series::new(header.as_str().into(), values);
+            columns.push(series.into_column());
         }
 
         DataFrame::new(columns)
             .map_err(|e| AppError::polars_error(format!("创建 DataFrame 失败: {}", e)))
+    }
+
+    fn worksheet_size(ws: &umya_spreadsheet::Worksheet) -> (u32, u32) {
+        let rows = ws.get_highest_row();
+        let cols = ws.get_highest_column();
+        (rows, cols)
     }
 
     /// 写入 DataFrame 到 Excel 文件

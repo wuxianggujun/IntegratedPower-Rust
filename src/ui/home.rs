@@ -571,6 +571,11 @@ fn render_function_config(ui: &mut egui::Ui, processor_id: &str, config: &mut cr
                     ui.label("🔍 分析选项");
                     ui.add_space(10.0);
 
+                    let mut analyze_colors = config.get_bool("analyze_colors");
+                    if ui.checkbox(&mut analyze_colors, "分析颜色信息").changed() {
+                        config.set_bool("analyze_colors".to_string(), analyze_colors);
+                    }
+
                     let mut analyze_structure = config.get_bool("analyze_structure");
                     if ui.checkbox(&mut analyze_structure, "分析表格结构").changed() {
                         config.set_bool("analyze_structure".to_string(), analyze_structure);
@@ -632,7 +637,8 @@ fn render_start_button(app: &mut IntegratedPowerApp, ui: &mut egui::Ui, config: 
                 if let Some(input_path) = &config.input_path {
                     let analyzer = crate::processor::examples::ExcelStructureAnalyzer::new();
                     let sheet = config.selected_sheet.as_deref();
-                    match analyzer.analyze_excel_structure(input_path, sheet) {
+                    let analyze_colors = config.get_bool("analyze_colors");
+                    match analyzer.analyze_excel_structure(input_path, sheet, analyze_colors) {
                         Ok(_) => {
                             crate::log_info!("Excel分析完成，请查看日志面板获取详细结果");
                             // 自动打开日志查看器
