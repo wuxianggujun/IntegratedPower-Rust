@@ -174,6 +174,11 @@ fn render_config_panel(app: &mut IntegratedPowerApp, ui: &mut egui::Ui, processo
                 "🔧",
                 "处理和整理辅材相关数据"
             ),
+            "excel_structure_analyzer" => (
+                "Excel结构分析器",
+                "🔍",
+                "分析Excel文件的单个 Sheet 结构，结果输出到日志面板"
+            ),
             _ => ("未知功能", "❓", ""),
         };
         
@@ -200,7 +205,7 @@ fn render_config_panel(app: &mut IntegratedPowerApp, ui: &mut egui::Ui, processo
 
         // 输入输出配置
         let mut updated_config = config.clone();
-        render_io_section(ui, &mut updated_config);
+        render_io_section(ui, &mut updated_config, processor_id);
 
         ui.add_space(30.0);
 
@@ -229,21 +234,26 @@ fn render_config_panel(app: &mut IntegratedPowerApp, ui: &mut egui::Ui, processo
     });
 }
 
-fn render_io_section(ui: &mut egui::Ui, config: &mut crate::models::ProcessorConfig) {
+fn render_io_section(ui: &mut egui::Ui, config: &mut crate::models::ProcessorConfig, processor_id: &str) {
     ui.label(egui::RichText::new("⚙️ 输入输出设置").size(18.0).strong());
     ui.add_space(15.0);
 
-    // 输入类型选择
-    ui.horizontal(|ui| {
-        ui.label("输入类型:");
-        ui.radio_value(&mut config.input_type, crate::models::InputType::File, "📄 单个文件");
-        ui.radio_value(&mut config.input_type, crate::models::InputType::Folder, "📁 文件夹");
-    });
+    // Excel分析器只需要输入文件
+    let is_excel_analyzer = processor_id == "excel_structure_analyzer";
+    
+    if !is_excel_analyzer {
+        // 输入类型选择
+        ui.horizontal(|ui| {
+            ui.label("输入类型:");
+            ui.radio_value(&mut config.input_type, crate::models::InputType::File, "📄 单个文件");
+            ui.radio_value(&mut config.input_type, crate::models::InputType::Folder, "📁 文件夹");
+        });
 
-    ui.add_space(10.0);
+        ui.add_space(10.0);
+    }
 
     // 输入路径
-    render_input_card(ui, config);
+    render_input_card(ui, config, is_excel_analyzer);
     ui.add_space(12.0);
     
     // Sheet 选择器（仅当选择了文件时显示）
@@ -252,15 +262,41 @@ fn render_io_section(ui: &mut egui::Ui, config: &mut crate::models::ProcessorCon
         ui.add_space(12.0);
     }
     
-    // 输出目录
-    render_output_card(ui, config);
-    ui.add_space(12.0);
+    // Excel分析器不需要输出设置
+    if !is_excel_analyzer {
+        // 输出目录
+        render_output_card(ui, config);
+        ui.add_space(12.0);
 
-    // 输出文件名
-    render_filename_card(ui, config);
+        // 输出文件名
+        render_filename_card(ui, config);
+    } else {
+        // 为Excel分析器显示提示信息
+        egui::Frame::none()
+            .fill(ui.visuals().faint_bg_color)
+            .rounding(10.0)
+            .inner_margin(16.0)
+            .stroke(egui::Stroke::new(1.0, ui.visuals().widgets.noninteractive.bg_stroke.color))
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(egui::RichText::new("📋").size(28.0));
+                    ui.add_space(12.0);
+                    
+                    ui.vertical(|ui| {
+                        ui.label(egui::RichText::new("输出设置").size(15.0).strong());
+                        ui.add_space(4.0);
+                        ui.label(
+                            egui::RichText::new("分析结果将直接输出到日志面板")
+                                .size(12.0)
+                                .color(ui.visuals().weak_text_color()),
+                        );
+                    });
+                });
+            });
+    }
 }
 
-fn render_input_card(ui: &mut egui::Ui, config: &mut crate::models::ProcessorConfig) {
+fn render_input_card(ui: &mut egui::Ui, config: &mut crate::models::ProcessorConfig, force_file: bool) {
     egui::Frame::none()
         .fill(ui.visuals().faint_bg_color)
         .rounding(10.0)
@@ -268,17 +304,19 @@ fn render_input_card(ui: &mut egui::Ui, config: &mut crate::models::ProcessorCon
         .stroke(egui::Stroke::new(1.0, ui.visuals().widgets.noninteractive.bg_stroke.color))
         .show(ui, |ui| {
             ui.horizontal(|ui| {
-                let icon = match config.input_type {
-                    crate::models::InputType::File => "📄",
-                    crate::models::InputType::Folder => "📁",
+                let icon = if force_file || config.input_type == crate::models::InputType::File {
+                    "📄"
+                } else {
+                    "📁"
                 };
                 ui.label(egui::RichText::new(icon).size(28.0));
                 ui.add_space(12.0);
                 
                 ui.vertical(|ui| {
-                    let label = match config.input_type {
-                        crate::models::InputType::File => "输入文件",
-                        crate::models::InputType::Folder => "输入文件夹",
+                    let label = if force_file || config.input_type == crate::models::InputType::File {
+                        "输入文件"
+                    } else {
+                        "输入文件夹"
                     };
                     ui.label(egui::RichText::new(label).size(15.0).strong());
                     ui.add_space(4.0);
@@ -304,21 +342,19 @@ fn render_input_card(ui: &mut egui::Ui, config: &mut crate::models::ProcessorCon
                         config.input_path = None;
                     }
                     
-                    let button_text = match config.input_type {
-                        crate::models::InputType::File => "选择文件",
-                        crate::models::InputType::Folder => "选择文件夹",
+                    let button_text = if force_file || config.input_type == crate::models::InputType::File {
+                        "选择文件"
+                    } else {
+                        "选择文件夹"
                     };
                     
                     if ui.add_sized(egui::vec2(100.0, 32.0), egui::Button::new(button_text)).clicked() {
-                        let selected = match config.input_type {
-                            crate::models::InputType::File => {
-                                rfd::FileDialog::new()
-                                    .add_filter("Excel 文件", &["xlsx", "xls"])
-                                    .pick_file()
-                            }
-                            crate::models::InputType::Folder => {
-                                rfd::FileDialog::new().pick_folder()
-                            }
+                        let selected = if force_file || config.input_type == crate::models::InputType::File {
+                            rfd::FileDialog::new()
+                                .add_filter("Excel 文件", &["xlsx", "xls"])
+                                .pick_file()
+                        } else {
+                            rfd::FileDialog::new().pick_folder()
                         };
                         
                         if let Some(path) = selected {
@@ -531,6 +567,25 @@ fn render_function_config(ui: &mut egui::Ui, processor_id: &str, config: &mut cr
                         config.set_bool("generate_summary".to_string(), generate_summary);
                     }
                 }
+                "excel_structure_analyzer" => {
+                    ui.label("🔍 分析选项");
+                    ui.add_space(10.0);
+
+                    let mut analyze_structure = config.get_bool("analyze_structure");
+                    if ui.checkbox(&mut analyze_structure, "分析表格结构").changed() {
+                        config.set_bool("analyze_structure".to_string(), analyze_structure);
+                    }
+                    
+                    let mut detailed_output = config.get_bool("detailed_output");
+                    if ui.checkbox(&mut detailed_output, "详细输出模式").changed() {
+                        config.set_bool("detailed_output".to_string(), detailed_output);
+                    }
+                    
+                    ui.add_space(10.0);
+                    ui.label(egui::RichText::new("💡 提示: 分析结果将输出到日志面板")
+                        .size(12.0)
+                        .color(ui.visuals().weak_text_color()));
+                }
                 _ => {}
             }
         });
@@ -538,9 +593,10 @@ fn render_function_config(ui: &mut egui::Ui, processor_id: &str, config: &mut cr
 
 fn render_start_button(app: &mut IntegratedPowerApp, ui: &mut egui::Ui, config: &crate::models::ProcessorConfig) {
     ui.vertical_centered(|ui| {
-        let can_start = config.input_path.is_some() 
-            && config.output_dir.is_some() 
-            && !config.output_filename.is_empty();
+        // Excel分析器只需要输入文件，不需要输出目录
+        let is_excel_analyzer = app.selected_processor.as_ref() == Some(&"excel_structure_analyzer".to_string());
+        let can_start = config.input_path.is_some()
+            && (is_excel_analyzer || (config.output_dir.is_some() && !config.output_filename.is_empty()));
         
         let button_color = if can_start {
             egui::Color32::from_rgb(76, 175, 80)
@@ -548,8 +604,14 @@ fn render_start_button(app: &mut IntegratedPowerApp, ui: &mut egui::Ui, config: 
             ui.visuals().widgets.inactive.bg_fill
         };
         
+        let button_text = if is_excel_analyzer {
+            "🔍 开始分析"
+        } else {
+            "🚀 开始处理"
+        };
+        
         let button = egui::Button::new(
-            egui::RichText::new("🚀 开始处理")
+            egui::RichText::new(button_text)
                 .size(18.0)
                 .strong()
                 .color(if can_start {
@@ -565,18 +627,38 @@ fn render_start_button(app: &mut IntegratedPowerApp, ui: &mut egui::Ui, config: 
         let response = ui.add_enabled(can_start, button);
         
         if response.clicked() {
-            app.error_message = Some("处理逻辑将在任务 12 中实现".to_string());
+            if is_excel_analyzer {
+                // 执行 Excel 分析（仅处理选中的单个 Sheet）
+                if let Some(input_path) = &config.input_path {
+                    let analyzer = crate::processor::examples::ExcelStructureAnalyzer::new();
+                    let sheet = config.selected_sheet.as_deref();
+                    match analyzer.analyze_excel_structure(input_path, sheet) {
+                        Ok(_) => {
+                            crate::log_info!("Excel分析完成，请查看日志面板获取详细结果");
+                            // 自动打开日志查看器
+                            app.log_viewer.show = true;
+                        }
+                        Err(e) => {
+                            app.error_message = Some(format!("Excel分析失败: {}", e));
+                        }
+                    }
+                }
+            } else {
+                app.error_message = Some("处理逻辑将在任务 12 中实现".to_string());
+            }
         }
         
         ui.add_space(8.0);
         
         if !can_start {
             let missing = if config.input_path.is_none() {
-                "请选择输入路径"
-            } else if config.output_dir.is_none() {
+                "请选择输入文件"
+            } else if !is_excel_analyzer && config.output_dir.is_none() {
                 "请选择输出目录"
-            } else {
+            } else if !is_excel_analyzer && config.output_filename.is_empty() {
                 "请输入输出文件名"
+            } else {
+                "未知错误"
             };
             
             ui.label(
@@ -586,8 +668,14 @@ fn render_start_button(app: &mut IntegratedPowerApp, ui: &mut egui::Ui, config: 
                     .color(ui.visuals().warn_fg_color),
             );
         } else {
+            let ready_text = if is_excel_analyzer {
+                "✓ 准备就绪，点击开始分析"
+            } else {
+                "✓ 准备就绪，点击开始处理"
+            };
+            
             ui.label(
-                egui::RichText::new("✓ 准备就绪，点击开始处理")
+                egui::RichText::new(ready_text)
                     .size(13.0)
                     .color(egui::Color32::from_rgb(76, 175, 80)),
             );

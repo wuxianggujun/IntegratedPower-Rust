@@ -3,6 +3,10 @@ name = "integrated-power"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+# 开启后将内嵌图标资源（需要确保 resources/icons 下存在对应文件）
+embed_icons = []
+
 [dependencies]
 # UI 框架
 egui = "0.28"

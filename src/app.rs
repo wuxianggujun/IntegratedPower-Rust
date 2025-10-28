@@ -78,20 +78,60 @@ impl IntegratedPowerApp {
     fn setup_custom_fonts(ctx: &egui::Context) {
         let mut fonts = egui::FontDefinitions::default();
 
-        // 添加中文字体支持
-        #[cfg(target_os = "windows")]
-        {
-            if let Ok(font_data) = std::fs::read("C:\\Windows\\Fonts\\msyh.ttc") {
-                fonts.font_data.insert(
-                    "microsoft_yahei".to_owned(),
-                    egui::FontData::from_owned(font_data),
-                );
-                fonts
-                    .families
-                    .entry(egui::FontFamily::Proportional)
-                    .or_default()
-                    .insert(0, "microsoft_yahei".to_owned());
+        // 1) 优先尝试加载项目资源字体（思源黑体）
+        let mut loaded_key: Option<String> = None;
+        let resource_candidates: Vec<std::path::PathBuf> = {
+            let mut v = Vec::new();
+            // 运行目录相对路径
+            v.push(std::path::PathBuf::from("resources/fonts/SourceHanSansSC-Regular.otf"));
+            // 可执行文件所在目录相对路径
+            if let Ok(exe) = std::env::current_exe() {
+                if let Some(dir) = exe.parent() {
+                    v.push(dir.join("resources/fonts/SourceHanSansSC-Regular.otf"));
+                }
             }
+            v
+        };
+
+        for p in resource_candidates {
+            if let Ok(font_data) = std::fs::read(&p) {
+                let key = "source_han_sans_sc".to_owned();
+                fonts.font_data.insert(key.clone(), egui::FontData::from_owned(font_data));
+                loaded_key = Some(key);
+                break;
+            }
+        }
+
+        // 2) 若资源字体不可用，在 Windows 上回退到常见系统中文字体
+        #[cfg(target_os = "windows")]
+        if loaded_key.is_none() {
+            let candidates = [
+                "C:\\Windows\\Fonts\\simhei.ttf",
+                "C:\\Windows\\Fonts\\msyh.ttf",
+                "C:\\Windows\\Fonts\\msyh.ttc",
+            ];
+            for path in candidates.iter() {
+                if let Ok(font_data) = std::fs::read(path) {
+                    let key = "win_cn_font".to_owned();
+                    fonts.font_data.insert(key.clone(), egui::FontData::from_owned(font_data));
+                    loaded_key = Some(key);
+                    break;
+                }
+            }
+        }
+
+        // 3) 若已加载到中文字体，则注入到比例与等宽字体族，保证 .monospace 等场景不缺字
+        if let Some(key) = loaded_key {
+            fonts
+                .families
+                .entry(egui::FontFamily::Proportional)
+                .or_default()
+                .insert(0, key.clone());
+            fonts
+                .families
+                .entry(egui::FontFamily::Monospace)
+                .or_default()
+                .insert(0, key);
         }
 
         ctx.set_fonts(fonts);

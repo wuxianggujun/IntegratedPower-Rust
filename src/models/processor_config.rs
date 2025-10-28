@@ -79,6 +79,15 @@ impl ProcessorConfig {
                 config.set_bool("remove_duplicates".to_string(), true);
                 config.set_bool("generate_summary".to_string(), false);
             }
+            "excel_structure_analyzer" => {
+                config.output_filename = "分析结果.txt".to_string();
+                config.input_type = InputType::File;
+                // Excel分析器不需要输出目录，结果直接输出到日志
+                config.output_dir = None;
+                // 设置默认选项
+                config.set_bool("analyze_structure".to_string(), true);
+                config.set_bool("detailed_output".to_string(), true);
+            }
             _ => {
                 config.output_filename = "output.xlsx".to_string();
             }
@@ -93,7 +102,7 @@ impl ProcessorConfig {
             if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("xlsx") {
                 // 使用 calamine 读取 sheet 列表
                 match calamine::open_workbook_auto(path) {
-                    Ok(mut workbook) => {
+                    Ok(workbook) => {
                         self.available_sheets = workbook.sheet_names().to_vec();
                         
                         // 如果当前没有选中的 sheet，选择第一个

@@ -47,6 +47,15 @@ impl ProcessorManager {
             icon: Some("🔧".to_string()),
             version: "1.0.0".to_string(),
         });
+
+        // 处理器 3: Excel结构分析器
+        self.processors.push(ProcessorEntry {
+            id: "excel_structure_analyzer".to_string(),
+            name: "Excel结构分析器".to_string(),
+            description: "分析Excel文件的单个Sheet结构".to_string(),
+            icon: Some("🔍".to_string()),
+            version: "1.0.0".to_string(),
+        });
     }
 
     /// 获取处理器信息
