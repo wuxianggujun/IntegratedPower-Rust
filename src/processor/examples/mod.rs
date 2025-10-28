@@ -2,6 +2,7 @@
 pub mod example_processor1;
 pub mod example_processor2;
 pub mod excel_structure_analyzer;
+pub mod cargo_analysis_processor;
 
 #[allow(unused_imports)]
 pub use example_processor1::DataCleaningProcessor;
@@ -9,3 +10,5 @@ pub use example_processor1::DataCleaningProcessor;
 pub use example_processor2::DataStatisticsProcessor;
 #[allow(unused_imports)]
 pub use excel_structure_analyzer::ExcelStructureAnalyzer;
+#[allow(unused_imports)]
+pub use cargo_analysis_processor::CargoAnalysisProcessor;

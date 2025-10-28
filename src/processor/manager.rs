@@ -30,11 +30,11 @@ impl ProcessorManager {
 
     /// 注册示例处理器
     fn register_example_processors(&mut self) {
-        // 处理器 1: 导出货物分析表
+        // 处理器 1: 货物分析表处理器（使用行类型识别系统）
         self.processors.push(ProcessorEntry {
-            id: "export_cargo_analysis".to_string(),
-            name: "导出货物分析表".to_string(),
-            description: "分析货物数据并生成分析报表".to_string(),
+            id: "cargo_analysis".to_string(),
+            name: "货物分析表处理器".to_string(),
+            description: "自动识别和处理货物分析表，提取项目编号、柜号、数据行等信息".to_string(),
             icon: Some("📦".to_string()),
             version: "1.0.0".to_string(),
         });
