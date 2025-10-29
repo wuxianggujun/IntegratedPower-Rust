@@ -247,7 +247,7 @@ mod tests {
     #[test]
     fn test_default_config() {
         let config = AppConfig::default();
-        assert_eq!(config.theme, Theme::Light);
+        assert_eq!(config.theme, Theme::System);
         assert_eq!(config.max_history_entries, 100);
         assert!(config.parallel_processing);
         assert!(config.max_parallel_tasks > 0);

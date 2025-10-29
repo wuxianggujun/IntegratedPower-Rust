@@ -164,7 +164,7 @@ fn render_config_panel(app: &mut IntegratedPowerApp, ui: &mut egui::Ui, processo
         
         // 功能标题
         let (name, icon, description) = match processor_id {
-            "export_cargo_analysis" => (
+            "cargo_analysis" => (
                 "导出货物分析表",
                 "📦",
                 "分析货物数据并生成详细的分析报表"
@@ -529,7 +529,7 @@ fn render_function_config(ui: &mut egui::Ui, processor_id: &str, config: &mut cr
         .inner_margin(16.0)
         .show(ui, |ui| {
             match processor_id {
-                "export_cargo_analysis" => {
+                "cargo_analysis" => {
                     ui.label("📊 分析选项");
                     ui.add_space(10.0);
                     

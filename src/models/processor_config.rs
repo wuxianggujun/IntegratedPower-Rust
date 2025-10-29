@@ -59,7 +59,7 @@ impl ProcessorConfig {
         
         // 根据处理器类型设置默认配置
         match processor_id {
-            "export_cargo_analysis" => {
+            "cargo_analysis" => {
                 config.output_filename = "货物分析表.xlsx".to_string();
                 config.input_type = InputType::File;
                 // 设置默认 sheet 名称

@@ -11,6 +11,9 @@ mod ui;
 use app::IntegratedPowerApp;
 
 fn main() -> Result<(), eframe::Error> {
+    // 初始化 tracing 日志输出（控制台），确保现有 tracing 宏生效
+    let _ = tracing_subscriber::fmt::try_init();
+
     // 配置窗口选项
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
